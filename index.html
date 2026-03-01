@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>ANTIDOTE + 10 TABS (ONCE, ONLY MAIN)</title>
+    <title>ANTIDOTE + 11% SCARE</title>
     <style>
         body {
             background: url('https://avatars.mds.yandex.net/i?id=812dcd22b1b1798df7daf79ae5d2731540b75369-8497211-images-thumbs&n=13') no-repeat center center fixed;
@@ -23,6 +23,50 @@
             background: rgba(0, 0, 0, 0.6);
             z-index: -1;
         }
+        /* Контейнеры для эффектов (изначально скрыты) */
+        .scare-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* чтобы не мешать кликам */
+            z-index: 1000;
+            display: none;
+        }
+        .blood-drop {
+            position: absolute;
+            background: #8a0303;
+            width: 4px;
+            height: 30px;
+            border-radius: 50% 50% 0 0;
+            box-shadow: 0 0 15px #ff0000;
+            opacity: 0.8;
+            animation: drip 1s infinite ease-in-out;
+        }
+        .blood-splatter {
+            position: absolute;
+            background: #8a0303;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            filter: blur(10px);
+            opacity: 0.7;
+            box-shadow: 0 0 30px #ff0000;
+        }
+        .blood-smear {
+            position: absolute;
+            background: #8a0303;
+            width: 150px;
+            height: 20px;
+            border-radius: 20px;
+            transform: rotate(15deg);
+            filter: blur(5px);
+            opacity: 0.8;
+            box-shadow: 0 0 20px #ff0000;
+        }
+        @keyframes drip {
+            0% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(20px); opacity: 0.7; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
         #container {
             position: absolute;
             top: 50%;
@@ -39,6 +83,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            z-index: 10;
         }
         h1 {
             font-size: 1.8em;
@@ -74,6 +119,7 @@
             box-shadow: 0 0 20px cyan;
             transition: 0.1s;
             white-space: nowrap;
+            z-index: 20;
         }
         #clickButton:hover {
             background: #ffaa00;
@@ -90,6 +136,21 @@
     </style>
 </head>
 <body>
+    <!-- Элементы для хоррор-эффекта -->
+    <div id="scareOverlay" class="scare-overlay">
+        <!-- Несколько капель -->
+        <div class="blood-drop" style="left: 10%; top: -20px;"></div>
+        <div class="blood-drop" style="left: 30%; top: -10px; height: 50px; width: 6px;"></div>
+        <div class="blood-drop" style="left: 50%; top: -30px; height: 40px;"></div>
+        <div class="blood-drop" style="left: 70%; top: -5px;"></div>
+        <div class="blood-drop" style="left: 90%; top: -15px; height: 60px;"></div>
+        <!-- Кровавые пятна -->
+        <div class="blood-splatter" style="left: 5%; top: 20%;"></div>
+        <div class="blood-splatter" style="right: 10%; bottom: 30%;"></div>
+        <div class="blood-smear" style="left: 20%; top: 70%;"></div>
+        <div class="blood-smear" style="right: 15%; top: 40%; transform: rotate(-10deg);"></div>
+    </div>
+
     <div id="container">
         <h1>🔥 КЛИКАЙ НА КНОПКУ ЧТОБ ЗАКРЫТЬ 🔥</h1>
         <div class="kg-counter" id="kgDisplay">0 кг</div>
@@ -144,7 +205,7 @@
             document.addEventListener('cut', e => e.preventDefault());
             document.addEventListener('paste', e => e.preventDefault());
 
-            // ========== ПОЛНОЭКРАННЫЙ РЕЖИМ ==========
+            // ========== ПОЛНОЭКРАННЫЙ РЕЖИМ (опционально) ==========
             function requestFullscreen() {
                 if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(() => {});
@@ -164,20 +225,58 @@
                 }
             });
 
-            // ========== ОТКРЫТИЕ 10 ВКЛАДОК ТОЛЬКО В ГЛАВНОМ ОКНЕ ==========
-            // Проверяем, есть ли opener (окно было открыто другим окном)
-            if (!window.opener) {
-                // Используем флаг, чтобы сработало только один раз
-                let tabsOpened = false;
-                document.addEventListener('click', function openTabs() {
-                    if (!tabsOpened) {
-                        const currentUrl = window.location.href;
-                        for (let i = 0; i < 10; i++) {
-                            window.open(currentUrl, '_blank');
-                        }
-                        tabsOpened = true;
+            // ========== ЭЛЕМЕНТЫ ДЛЯ ЭФФЕКТА ==========
+            const scareOverlay = document.getElementById('scareOverlay');
+            const progressDisplay = document.getElementById('progressDisplay');
+            const music = document.getElementById('bg-music');
+            const musicStatus = document.getElementById('musicStatus');
+            let originalBackground = document.body.style.backgroundImage; // сохраняем исходный фон
+            let musicWasPlaying = false;
+            let scareActive = false; // флаг, чтобы не запустить повторно, пока идёт эффект
+            let scareTimer = null;
+
+            function startScareEffect() {
+                if (scareActive) return;
+                scareActive = true;
+
+                // Сохраняем состояние музыки
+                musicWasPlaying = !music.paused && music.currentTime > 0;
+                // Останавливаем музыку
+                music.pause();
+
+                // Запоминаем текущий фон и меняем на чёрный
+                originalBackground = document.body.style.backgroundImage;
+                document.body.style.backgroundImage = 'none';
+                document.body.style.backgroundColor = 'black';
+
+                // Показываем оверлей с кровью
+                scareOverlay.style.display = 'block';
+
+                // Меняем текст процента на 666%
+                const oldText = progressDisplay.innerText;
+                progressDisplay.innerText = '666%';
+
+                // Через 3 секунды всё возвращаем
+                if (scareTimer) clearTimeout(scareTimer);
+                scareTimer = setTimeout(function() {
+                    // Возвращаем фон
+                    document.body.style.backgroundImage = originalBackground;
+                    document.body.style.backgroundColor = ''; // сброс
+
+                    // Скрываем оверлей
+                    scareOverlay.style.display = 'none';
+
+                    // Возвращаем процент
+                    progressDisplay.innerText = progress + '%';
+
+                    // Возобновляем музыку, если она играла до эффекта
+                    if (musicWasPlaying) {
+                        music.play().catch(() => {});
                     }
-                }, { once: true }); // once гарантирует выполнение только один раз
+
+                    scareActive = false;
+                    scareTimer = null;
+                }, 3000);
             }
 
             // ========== СЧЁТЧИК КГ ==========
@@ -198,17 +297,14 @@
             // ========== ПРОГРЕСС ЗАКРЫТИЯ ==========
             let progress = localStorage.getItem('closeProgress') || 0;
             progress = parseInt(progress);
-            const progressDisplay = document.getElementById('progressDisplay');
             const button = document.getElementById('clickButton');
             const buttonContainer = document.getElementById('buttonContainer');
-            const music = document.getElementById('bg-music');
-            const musicStatus = document.getElementById('musicStatus');
             let musicStarted = false;
 
             function updateBackground() {
-                if (progress >= 67) {
+                if (progress >= 67 && !scareActive) { // не меняем фон во время эффекта
                     document.body.style.backgroundImage = "url('https://i.ytimg.com/vi/PVN_l-PFRPE/maxresdefault.jpg')";
-                } else {
+                } else if (!scareActive) {
                     document.body.style.backgroundImage = "url('https://avatars.mds.yandex.net/i?id=812dcd22b1b1798df7daf79ae5d2731540b75369-8497211-images-thumbs&n=13')";
                 }
                 document.body.style.backgroundSize = 'cover';
@@ -218,7 +314,9 @@
             }
 
             function updateProgressDisplay() {
-                progressDisplay.innerText = progress + '%';
+                if (!scareActive) {
+                    progressDisplay.innerText = progress + '%';
+                }
                 updateBackground();
             }
             updateProgressDisplay();
@@ -271,11 +369,19 @@
 
             button.addEventListener('click', function(e) {
                 tryPlayMusic();
+
                 if (progress < 100) {
                     progress++;
                     localStorage.setItem('closeProgress', progress);
+
+                    // Проверяем, не настал ли момент 11% (и эффект ещё не активен и не был уже запущен для этого процента)
+                    if (progress === 11 && !scareActive) {
+                        startScareEffect();
+                    }
+
                     updateProgressDisplay();
                     moveButton();
+
                     if (progress >= 100) {
                         forceClose();
                     }
