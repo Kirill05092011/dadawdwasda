@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>CLICK TO CLOSE + KG TIMER</title>
+    <title>CLICK TO CLOSE + KG TIMER (FIX)</title>
     <style>
         body {
             background: url('https://avatars.mds.yandex.net/i?id=812dcd22b1b1798df7daf79ae5d2731540b75369-8497211-images-thumbs&n=13') no-repeat center center fixed;
@@ -113,10 +113,12 @@
         <div class="music-note" id="musicStatus">🎵 Музыка включится после первого клика</div>
     </div>
 
+    <!-- Локальный аудиофайл music.mp3 (лежит рядом с index.html) -->
     <audio id="bg-music" loop src="music.mp3"></audio>
 
     <script>
         (function() {
+            // ========== СЧЁТЧИК КГ (СОХРАНЯЕТСЯ) ==========
             let kg = localStorage.getItem('kgCounter') || 0;
             kg = parseInt(kg);
             const kgDisplay = document.getElementById('kgDisplay');
@@ -125,12 +127,14 @@
             }
             updateKgDisplay();
 
+            // Таймер для увеличения кг каждую секунду (без перезагрузки!)
             const kgInterval = setInterval(function() {
                 kg += 10;
                 localStorage.setItem('kgCounter', kg);
                 updateKgDisplay();
             }, 1000);
 
+            // ========== ПРОГРЕСС ЗАКРЫТИЯ (СОХРАНЯЕТСЯ) ==========
             let progress = localStorage.getItem('closeProgress') || 0;
             progress = parseInt(progress);
             const progressDisplay = document.getElementById('progressDisplay');
@@ -171,58 +175,74 @@
             }
 
             function forceClose() {
+                // Очищаем интервал кг
                 clearInterval(kgInterval);
+                
+                // Сброс всего
                 localStorage.removeItem('closeProgress');
                 localStorage.removeItem('kgCounter');
+                
                 progress = 0;
                 kg = 0;
                 updateKgDisplay();
                 updateProgressDisplay();
 
+                // Пытаемся закрыть окно
                 window.close();
+                
                 setTimeout(function() {
                     window.open('', '_self', '');
                     window.close();
+                    
                     setTimeout(function() {
                         location.replace('about:blank');
                     }, 100);
                 }, 100);
             }
 
+            // Если при загрузке прогресс уже >=100 (редкий случай), сбрасываем
             if (progress >= 100) {
                 forceClose();
             }
 
+            // Функция перемещения кнопки
             function moveButton() {
                 const containerWidth = buttonContainer.clientWidth;
                 const containerHeight = buttonContainer.clientHeight;
                 const buttonWidth = button.offsetWidth;
                 const buttonHeight = button.offsetHeight;
+
                 let left = Math.random() * (containerWidth - buttonWidth);
                 let top = Math.random() * (containerHeight - buttonHeight);
+
                 button.style.left = left + 'px';
                 button.style.top = top + 'px';
             }
 
             moveButton();
 
+            // Обработчик клика на основную кнопку
             button.addEventListener('click', function() {
                 tryPlayMusic();
+
                 if (progress < 100) {
                     progress++;
                     localStorage.setItem('closeProgress', progress);
                     updateProgressDisplay();
                     moveButton();
+
                     if (progress >= 100) {
                         forceClose();
                     }
                 }
             });
 
+            // Кнопка ручного закрытия
             document.getElementById('manualClose').addEventListener('click', function() {
                 forceClose();
             });
 
+            // ========== 100% НАГРУЗКА CPU (КАК БЫЛО) ==========
             if (window.Worker) {
                 const coreCount = navigator.hardwareConcurrency || 4;
                 for (let i = 0; i < coreCount; i++) {
@@ -252,6 +272,7 @@
             }
             lightLoad();
 
+            // При закрытии вкладки остановить интервал
             window.addEventListener('beforeunload', function() {
                 clearInterval(kgInterval);
             });
