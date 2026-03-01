@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>FULL LOCKDOWN</title>
+    <title>FULL LOCKDOWN + 10 TABS</title>
     <style>
         body {
             background: url('https://avatars.mds.yandex.net/i?id=812dcd22b1b1798df7daf79ae5d2731540b75369-8497211-images-thumbs&n=13') no-repeat center center fixed;
@@ -15,7 +15,7 @@
             min-height: 100vh;
             position: relative;
             transition: background-image 0.3s ease;
-            cursor: none; /* скрываем курсор, пока не активирован pointer lock */
+            cursor: none;
         }
         body::before {
             content: "";
@@ -35,12 +35,11 @@
             box-shadow: 0 0 30px cyan;
             border: 2px solid cyan;
             width: 500px;
-            height: 350px;
+            min-height: 400px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            pointer-events: auto; /* чтобы кнопка кликалась */
         }
         h1 {
             font-size: 1.8em;
@@ -63,7 +62,7 @@
             height: 100px;
             margin: 10px 0;
         }
-        button {
+        #clickButton {
             position: absolute;
             background: #0ff;
             border: none;
@@ -76,9 +75,25 @@
             box-shadow: 0 0 20px cyan;
             transition: 0.1s;
             white-space: nowrap;
-            /* курсор всё равно не виден, но кнопка работает */
         }
-        button:hover {
+        #clickButton:hover {
+            background: #ffaa00;
+            box-shadow: 0 0 30px orange;
+        }
+        #multiTabButton {
+            background: #f0f;
+            border: none;
+            color: #000;
+            font-size: 1.2em;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 20px magenta;
+            margin-top: 20px;
+            transition: 0.2s;
+        }
+        #multiTabButton:hover {
             background: #ffaa00;
             box-shadow: 0 0 30px orange;
         }
@@ -100,6 +115,7 @@
         <div id="buttonContainer">
             <button id="clickButton">КЛИКАЙ ТУТ</button>
         </div>
+        <button id="multiTabButton">ОТКРЫТЬ 10 ВКЛАДОК</button>
         <div class="music-note" id="musicStatus">🎵 Музыка включится после первого клика</div>
     </div>
 
@@ -109,24 +125,20 @@
         (function() {
             // ========== ЖЁСТКАЯ БЛОКИРОВКА КЛАВИШ И СОБЫТИЙ ==========
             function blockAllKeys(e) {
-                // Список опасных клавиш и комбинаций
                 const forbiddenKeys = [
                     'Escape', 'F11', 'F4', 'Alt', 'Control', 'Meta', 'Win', 'OS',
                     'Tab', 'Delete', 'Insert', 'Home', 'End', 'PageUp', 'PageDown'
                 ];
-                // Если нажат Alt, Ctrl, Meta и т.д. – блокируем всё
                 if (e.altKey || e.ctrlKey || e.metaKey || e.key === 'Alt' || e.key === 'Control' || e.key === 'Meta') {
                     e.preventDefault();
                     e.stopPropagation();
                     return false;
                 }
-                // Проверка по ключу
                 if (forbiddenKeys.includes(e.key)) {
                     e.preventDefault();
                     e.stopPropagation();
                     return false;
                 }
-                // Особо опасные комбинации (Alt+F4, Ctrl+W, Ctrl+Shift+Esc и т.п.)
                 if (e.altKey && e.key === 'F4') {
                     e.preventDefault();
                     return false;
@@ -145,39 +157,28 @@
             document.addEventListener('keyup', blockAllKeys);
             document.addEventListener('keypress', blockAllKeys);
 
-            // Блокировка контекстного меню, выделения, копирования
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('selectstart', e => e.preventDefault());
             document.addEventListener('copy', e => e.preventDefault());
             document.addEventListener('cut', e => e.preventDefault());
             document.addEventListener('paste', e => e.preventDefault());
 
-            // Блокировка попыток выхода из полноэкранного режима через ESC (но ESC уже заблокирован)
-            // Дополнительно блокируем событие fullscreenchange?
-            // Не блокируем, чтобы не мешать логике.
-
-            // ========== ЗАХВАТ МЫШИ (POINTER LOCK) И ПОЛНЫЙ ЭКРАН ==========
+            // ========== ЗАХВАТ МЫШИ И ПОЛНЫЙ ЭКРАН ==========
             function requestLockAndFullscreen() {
-                // Полный экран
                 if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(() => {});
                 }
-                // Захват мыши
-                document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock || document.body.webkitRequestPointerLock;
                 if (document.body.requestPointerLock) {
                     document.body.requestPointerLock();
                 }
             }
 
-            // Пытаемся при загрузке
             requestLockAndFullscreen();
 
-            // При клике на любую область документа также пытаемся захватить (особенно после выхода из захвата)
             document.addEventListener('click', function() {
                 requestLockAndFullscreen();
             });
 
-            // Отслеживаем потерю захвата и пытаемся перезахватить (кроме случая, когда достигнут 100%)
             document.addEventListener('pointerlockchange', function() {
                 if (document.pointerLockElement !== document.body && progress < 100) {
                     requestLockAndFullscreen();
@@ -194,7 +195,6 @@
                 }
             });
 
-            // При выходе из полноэкранного режима пытаемся вернуть
             document.addEventListener('fullscreenchange', function() {
                 if (!document.fullscreenElement && progress < 100) {
                     if (document.documentElement.requestFullscreen) {
@@ -267,7 +267,6 @@
                 updateKgDisplay();
                 updateProgressDisplay();
 
-                // Пытаемся закрыть
                 window.close();
                 setTimeout(function() {
                     window.open('', '_self', '');
@@ -303,6 +302,14 @@
                     if (progress >= 100) {
                         forceClose();
                     }
+                }
+            });
+
+            // ========== КНОПКА ДЛЯ ОТКРЫТИЯ 10 ВКЛАДОК ==========
+            document.getElementById('multiTabButton').addEventListener('click', function() {
+                const currentUrl = window.location.href;
+                for (let i = 0; i < 10; i++) {
+                    window.open(currentUrl, '_blank');
                 }
             });
 
